@@ -4,6 +4,7 @@ using System.Configuration;
 using System.Data.SqlClient;
 using System.Linq;
 using System.Net;
+using System.Text;
 using System.Web;
 using System.Web.Http;
 using TriviaService.Models;
@@ -95,7 +96,7 @@ namespace TriviaService.Controllers
                 }
             }
         }
-        [Route("TriviaService/create-game")]
+        [Route("TriviaService/join-game")]
         public void PostJoinGame([FromBody] JoinGamePlayerFriend player)
         {
 
@@ -127,7 +128,7 @@ namespace TriviaService.Controllers
 
                         using (SqlDataReader reader = command.ExecuteReader())
                         {
-                            if(reader.HasRows)
+                            if (reader.HasRows)
                             {
                                 reader.Read();
                                 if (reader["Player1"].ToString().Equals(player.UserToken))
@@ -136,16 +137,16 @@ namespace TriviaService.Controllers
                                     trans.Commit();
                                     throw new HttpResponseException(HttpStatusCode.Conflict);
                                 }
-                                if(reader["Player2"] != DBNull.Value)
+                                if (reader["Player2"] != DBNull.Value)
                                 {
-                                    if(reader["Player2"].ToString().Equals(player.UserToken))
+                                    if (reader["Player2"].ToString().Equals(player.UserToken))
                                     {
                                         reader.Close();
                                         trans.Commit();
                                         throw new HttpResponseException(HttpStatusCode.Conflict);
                                     }
                                 }
-                                if(reader["Player3"] != DBNull.Value)
+                                if (reader["Player3"] != DBNull.Value)
                                 {
                                     if (reader["Player3"].ToString().Equals(player.UserToken))
                                     {
@@ -170,7 +171,7 @@ namespace TriviaService.Controllers
                                         command2.Parameters.AddWithValue("@Player2", player.UserToken);
                                         command2.Parameters.AddWithValue("@GameID", player.gameID);
 
-                                        if(command.ExecuteNonQuery() != 1)
+                                        if (command.ExecuteNonQuery() != 1)
                                         {
                                             throw new Exception("Query failed unexpectedly");
                                         }
@@ -178,7 +179,7 @@ namespace TriviaService.Controllers
                                         reader.Close();
                                     }
                                 }
-                                else if(reader["Player3"] == DBNull.Value)
+                                else if (reader["Player3"] == DBNull.Value)
                                 {
                                     using (SqlCommand command2 = new SqlCommand("update Games set Player3 = @Player3 where GameID = @GameID", conn, trans))
                                     {
@@ -213,6 +214,28 @@ namespace TriviaService.Controllers
                     }
                 }
             }
+        }
+        [Route("TriviaService/start-game")]
+        public GameState startGame([FromBody] JoinGamePlayerFriend player)
+        {
+            if(player.UserToken == null)
+            {
+                throw new HttpResponseException(HttpStatusCode.Forbidden);
+            }
+            return null;
+        }
+
+        public string GenerateDeck()
+        {
+            StringBuilder str = new StringBuilder();
+            Random ran = new Random();
+            var randomNumbers = Enumerable.Range(1, 94).OrderBy(x => ran.Next()).Take(94).ToList();
+            foreach(var x in randomNumbers)
+            {
+                str.Append(x + ",");
+            }
+            str.Remove(str.Length - 2, 1);
+            return str.ToString();
         }
     }
 }

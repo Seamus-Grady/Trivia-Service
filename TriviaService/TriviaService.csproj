@@ -163,6 +163,7 @@
     <Compile Include="Models\GameState.cs" />
     <Compile Include="Models\JoinGamePlayerFriend.cs" />
     <Compile Include="Models\JoinGamePlayerHost.cs" />
+    <Compile Include="Models\Player.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
