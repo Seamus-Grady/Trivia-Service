@@ -19,5 +19,9 @@ namespace TriviaService.Models
         public int Science { get; set; }
 
         public int Sports { get; set; }
+
+        public int? currentPosition { get; set; }
+
+        public string currentPositionMovement { get; set; }
     }
 }

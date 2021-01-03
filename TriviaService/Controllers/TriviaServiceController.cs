@@ -90,11 +90,151 @@ namespace TriviaService.Controllers
                         gameID = (int)command.ExecuteScalar();
 
                         trans.Commit();
-
+                    }
+                    using (SqlCommand command = new SqlCommand("insert into PlayerUser(GameID, PlayerID) values (@GameID, @PlayerID)", conn, trans))
+                    {
+                        command.Parameters.AddWithValue("@GameID", gameID);
+                        command.Parameters.AddWithValue("@PlayerID", player.UserToken);
+                        if (command.ExecuteNonQuery() != 1)
+                        {
+                            throw new Exception("Query failed unexpectedly");
+                        }
+                        trans.Commit();
                         return gameID;
                     }
                 }
             }
+        }
+        [Route ("TriviaService/cards-game")]
+        public Card GetCard([FromBody] CardInformation ci)
+        {
+            string shuffleDeck = "";
+            int cardNum;
+            string currentQuestion = "";
+            string currentAnswer = "";
+            Card cardToReturn = new Card();
+            if (ci == null)
+            {
+                throw new HttpResponseException(HttpStatusCode.Forbidden);
+            }
+            using (SqlConnection conn = new SqlConnection(TriviaServiceDB))
+            {
+                conn.Open();
+                using (SqlTransaction trans = conn.BeginTransaction())
+                {
+                    if (ci.category != 6)
+                    {
+                        using (SqlCommand command = new SqlCommand("select Deck from Games where gameID = @gameID", conn, trans))
+                        {
+                            command.Parameters.AddWithValue("@gameID", ci.gameID);
+                            using (SqlDataReader reader = command.ExecuteReader())
+                            {
+                                if (reader.HasRows)
+                                {
+                                    reader.Read();
+                                    shuffleDeck = reader["Deck"].ToString();
+                                    if (shuffleDeck.Length == 0)
+                                    {
+                                        shuffleDeck = GenerateDeck();
+                                    }
+                                    int.TryParse(shuffleDeck.Substring(shuffleDeck.LastIndexOf(',')), out cardNum);
+                                }
+                                else
+                                {
+                                    reader.Close();
+                                    trans.Commit();
+                                    throw new HttpResponseException(HttpStatusCode.Forbidden);
+                                }
+                            }
+                        }
+                        using (SqlCommand command = new SqlCommand("select * from Deck where CardID = @CardID", conn, trans))
+                        {
+                            command.Parameters.AddWithValue("@CardID", cardNum);
+                            using (SqlDataReader reader = command.ExecuteReader())
+                            {
+                                if (reader.HasRows)
+                                {
+                                    reader.Read();
+                                    cardToReturn.Geography = reader["Geography"].ToString();
+                                    cardToReturn.Entertainment = reader["Entertainment"].ToString();
+                                    cardToReturn.History = reader["History"].ToString();
+                                    cardToReturn.Art = reader["Art"].ToString();
+                                    cardToReturn.Science = reader["Science"].ToString();
+                                    cardToReturn.Sports = reader["Sports"].ToString();
+                                    cardToReturn.GeographyA = reader["GeographyA"].ToString();
+                                    cardToReturn.EntertainmentA = reader["EntertainmentA"].ToString();
+                                    cardToReturn.HistoryA = reader["HistoryA"].ToString();
+                                    cardToReturn.ArtA = reader["ArtA"].ToString();
+                                    cardToReturn.ScienceA = reader["ScienceA"].ToString();
+                                    cardToReturn.SportsA = reader["SportsA"].ToString();
+                                }
+                                else
+                                {
+                                    reader.Close();
+                                    trans.Commit();
+                                    throw new HttpResponseException(HttpStatusCode.Forbidden);
+                                }
+                            }
+                        }
+                    }
+                    switch (ci.category)
+                    {
+                        case 0:
+                            currentQuestion = cardToReturn.Geography;
+                            currentAnswer = cardToReturn.GeographyA;
+                            break;
+                        case 1:
+                            currentQuestion = cardToReturn.Entertainment;
+                            currentAnswer = cardToReturn.EntertainmentA;
+                            break;
+                        case 2:
+                            currentQuestion = cardToReturn.History;
+                            currentAnswer = cardToReturn.HistoryA;
+                            break;
+                        case 3:
+                            currentQuestion = cardToReturn.Art;
+                            currentAnswer = cardToReturn.ArtA;
+                            break;
+                        case 4:
+                            currentQuestion = cardToReturn.Science;
+                            currentAnswer = cardToReturn.ScienceA;
+                            break;
+                        case 5:
+                            currentQuestion = cardToReturn.Sports;
+                            currentAnswer = cardToReturn.SportsA;
+                            break;
+                        case 6:
+                            currentQuestion = "Roll Again";
+                            currentAnswer = "Roll Again";
+                            break;
+                    }
+                    using (SqlCommand command = new SqlCommand("update Games set CurrentQuestionCat = @CurrentQuestionCat, CurrentQuestion = @CurrentQuestion, CurrentAnswer = @CurrentAnswer, Deck = @Deck where GameID = @GameID", conn, trans))
+                    {
+                        command.Parameters.AddWithValue("@CurrentQuestionCat", ci.category);
+                        command.Parameters.AddWithValue("@CurrentQuestion", currentQuestion);
+                        command.Parameters.AddWithValue("@CurrentAnswer", currentAnswer);
+                        command.Parameters.AddWithValue("@Deck", shuffleDeck);
+                        command.Parameters.AddWithValue("@GameID", ci.gameID);
+                        if (command.ExecuteNonQuery() != 1)
+                        {
+                            throw new Exception("Query failed unexpectedly");
+                        }
+                        trans.Commit();
+                    }
+                    using (SqlCommand command = new SqlCommand("update PlayerUser set CurrentPosition = @CurrentPosition, CurrentPositionMovement = @CurrentPositionMovement where GameID = @GameID", conn, trans))
+                    {
+                        command.Parameters.AddWithValue("@CurrentPosition", ci.position);
+                        command.Parameters.AddWithValue("@CurrentPositionMovement", ci.playerMovement);
+                        command.Parameters.AddWithValue("@GameID", ci.gameID);
+                        if (command.ExecuteNonQuery() != 1)
+                        {
+                            throw new Exception("Query failed unexpectedly");
+                        }
+                        trans.Commit();
+                    }
+                }
+            }
+            return cardToReturn;
         }
         [Route("TriviaService/join-game")]
         public void PostJoinGame([FromBody] JoinGamePlayerFriend player)
@@ -176,6 +316,16 @@ namespace TriviaService.Controllers
                                             throw new Exception("Query failed unexpectedly");
                                         }
                                         trans.Commit();
+                                    }
+                                    using (SqlCommand command2 = new SqlCommand("insert into PlayerUser(GameID, PlayerID) values (@GameID, @PlayerID)",conn, trans))
+                                    {
+                                        command.Parameters.AddWithValue("@GameID",player.gameID);
+                                        command.Parameters.AddWithValue("@PlayerID", player.UserToken);
+                                        if (command.ExecuteNonQuery() != 1)
+                                        {
+                                            throw new Exception("Query failed unexpectedly");
+                                        }
+                                        trans.Commit();
                                         reader.Close();
                                     }
                                 }
@@ -193,6 +343,17 @@ namespace TriviaService.Controllers
                                         trans.Commit();
                                         reader.Close();
                                     }
+                                    using (SqlCommand command2 = new SqlCommand("insert into PlayerUser(GameID, PlayerID) values (@GameID, @PlayerID)", conn, trans))
+                                    {
+                                        command.Parameters.AddWithValue("@GameID", player.gameID);
+                                        command.Parameters.AddWithValue("@PlayerID", player.UserToken);
+                                        if (command.ExecuteNonQuery() != 1)
+                                        {
+                                            throw new Exception("Query failed unexpectedly");
+                                        }
+                                        trans.Commit();
+                                        reader.Close();
+                                    }
                                 }
                                 else if (reader["Player4"] == DBNull.Value)
                                 {
@@ -201,6 +362,17 @@ namespace TriviaService.Controllers
                                         command2.Parameters.AddWithValue("@Player4", player.UserToken);
                                         command2.Parameters.AddWithValue("@GameID", player.gameID);
 
+                                        if (command.ExecuteNonQuery() != 1)
+                                        {
+                                            throw new Exception("Query failed unexpectedly");
+                                        }
+                                        trans.Commit();
+                                        reader.Close();
+                                    }
+                                    using (SqlCommand command2 = new SqlCommand("insert into PlayerUser(GameID, PlayerID) values (@GameID, @PlayerID)", conn, trans))
+                                    {
+                                        command.Parameters.AddWithValue("@GameID", player.gameID);
+                                        command.Parameters.AddWithValue("@PlayerID", player.UserToken);
                                         if (command.ExecuteNonQuery() != 1)
                                         {
                                             throw new Exception("Query failed unexpectedly");
