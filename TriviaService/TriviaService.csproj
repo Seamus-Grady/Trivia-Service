@@ -160,6 +160,7 @@
     <Compile Include="Global.asax.cs">
       <DependentUpon>Global.asax</DependentUpon>
     </Compile>
+    <Compile Include="Models\CancelJoinPlayer.cs" />
     <Compile Include="Models\Card.cs" />
     <Compile Include="Models\CardInformation.cs" />
     <Compile Include="Models\GameState.cs" />
