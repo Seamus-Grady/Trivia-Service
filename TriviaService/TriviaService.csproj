@@ -160,10 +160,13 @@
     <Compile Include="Global.asax.cs">
       <DependentUpon>Global.asax</DependentUpon>
     </Compile>
+    <Compile Include="Models\Card.cs" />
+    <Compile Include="Models\CardInformation.cs" />
     <Compile Include="Models\GameState.cs" />
     <Compile Include="Models\JoinGamePlayerFriend.cs" />
     <Compile Include="Models\JoinGamePlayerHost.cs" />
     <Compile Include="Models\Player.cs" />
+    <Compile Include="Models\PlayerTurn.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
