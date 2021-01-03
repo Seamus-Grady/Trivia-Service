@@ -379,7 +379,7 @@ namespace TriviaService.Controllers
             return playerWon;
         }
         [Route("TriviaService/join-game")]
-        public void PostJoinGame([FromBody] JoinGamePlayerFriend player)
+        public void PutJoinGame([FromBody] JoinGamePlayerFriend player)
         {
 
             if (player == null || player.UserToken == null)
