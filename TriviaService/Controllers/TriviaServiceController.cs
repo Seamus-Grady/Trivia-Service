@@ -89,9 +89,9 @@ namespace TriviaService.Controllers
 
                         gameID = (int)command.ExecuteScalar();
 
-                        trans.Commit();
+
                     }
-                    using (SqlCommand command = new SqlCommand("insert into PlayerUser(GameID, PlayerID) values (@GameID, @PlayerID)", conn, trans))
+                    using (SqlCommand command = new SqlCommand("insert into PlayerUser(GameID, PlayerID, Geography, Entertainment, History, Art, Science, Sports) values (@GameID, @PlayerID, 0, 0, 0, 0, 0, 0)", conn, trans))
                     {
                         command.Parameters.AddWithValue("@GameID", gameID);
                         command.Parameters.AddWithValue("@PlayerID", player.UserToken);
@@ -379,7 +379,7 @@ namespace TriviaService.Controllers
             return playerWon;
         }
         [Route("TriviaService/join-game")]
-        public void PutJoinGame([FromBody] JoinGamePlayerFriend player)
+        public int PostJoinGame([FromBody] JoinGamePlayerFriend player)
         {
 
             if (player == null || player.UserToken == null)
@@ -458,8 +458,9 @@ namespace TriviaService.Controllers
                                             throw new Exception("Query failed unexpectedly");
                                         }
                                         trans.Commit();
+                                        
                                     }
-                                    using (SqlCommand command2 = new SqlCommand("insert into PlayerUser(GameID, PlayerID) values (@GameID, @PlayerID)",conn, trans))
+                                    using (SqlCommand command2 = new SqlCommand("insert into PlayerUser(GameID, PlayerID, Geography, Entertainment, History, Art, Science, Sports) values (@GameID, @PlayerID, 0, 0, 0, 0, 0, 0)", conn, trans))
                                     {
                                         command.Parameters.AddWithValue("@GameID",player.gameID);
                                         command.Parameters.AddWithValue("@PlayerID", player.UserToken);
@@ -469,6 +470,7 @@ namespace TriviaService.Controllers
                                         }
                                         trans.Commit();
                                         reader.Close();
+                                        return 1;
                                     }
                                 }
                                 else if (reader["Player3"] == DBNull.Value)
@@ -485,7 +487,7 @@ namespace TriviaService.Controllers
                                         trans.Commit();
                                         reader.Close();
                                     }
-                                    using (SqlCommand command2 = new SqlCommand("insert into PlayerUser(GameID, PlayerID) values (@GameID, @PlayerID)", conn, trans))
+                                    using (SqlCommand command2 = new SqlCommand("insert into PlayerUser(GameID, PlayerID, Geography, Entertainment, History, Art, Science, Sports) values (@GameID, @PlayerID, 0, 0, 0, 0, 0, 0)", conn, trans))
                                     {
                                         command.Parameters.AddWithValue("@GameID", player.gameID);
                                         command.Parameters.AddWithValue("@PlayerID", player.UserToken);
@@ -495,6 +497,7 @@ namespace TriviaService.Controllers
                                         }
                                         trans.Commit();
                                         reader.Close();
+                                        return 2;
                                     }
                                 }
                                 else if (reader["Player4"] == DBNull.Value)
@@ -509,9 +512,8 @@ namespace TriviaService.Controllers
                                             throw new Exception("Query failed unexpectedly");
                                         }
                                         trans.Commit();
-                                        reader.Close();
                                     }
-                                    using (SqlCommand command2 = new SqlCommand("insert into PlayerUser(GameID, PlayerID) values (@GameID, @PlayerID)", conn, trans))
+                                    using (SqlCommand command2 = new SqlCommand("insert into PlayerUser(GameID, PlayerID, Geography, Entertainment, History, Art, Science, Sports) values (@GameID, @PlayerID, 0, 0, 0, 0, 0, 0)", conn, trans))
                                     {
                                         command.Parameters.AddWithValue("@GameID", player.gameID);
                                         command.Parameters.AddWithValue("@PlayerID", player.UserToken);
@@ -521,6 +523,7 @@ namespace TriviaService.Controllers
                                         }
                                         trans.Commit();
                                         reader.Close();
+                                        return 3;
                                     }
                                 }
                             }
@@ -528,6 +531,7 @@ namespace TriviaService.Controllers
                     }
                 }
             }
+            return -1;
         }
         [Route("TriviaService/games/{gameID}/{brief}")]
         public GameState GetGameState([FromUri] string gameID, [FromUri] bool brief)
