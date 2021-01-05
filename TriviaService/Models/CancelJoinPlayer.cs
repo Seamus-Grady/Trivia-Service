@@ -11,6 +11,6 @@ namespace TriviaService.Models
 
         public int gameID { get; set; }
 
-        public int playerTurn { get; set; }
+        public string playerTurn { get; set; }
     }
 }
