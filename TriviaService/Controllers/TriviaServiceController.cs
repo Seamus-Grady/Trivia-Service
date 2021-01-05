@@ -236,6 +236,32 @@ namespace TriviaService.Controllers
             }
             return cardToReturn;
         }
+        [Route("TriviaService/game-setup")]
+        public void PutInitalSetup([FromBody] InitialSetupPlayer isp)
+        {
+            if (isp == null)
+            {
+                throw new HttpResponseException(HttpStatusCode.Forbidden);
+            }
+            using (SqlConnection conn = new SqlConnection(TriviaServiceDB))
+            {
+                conn.Open();
+                using (SqlTransaction trans = conn.BeginTransaction())
+                {
+                    using (SqlCommand command = new SqlCommand("update PlayerUser set CurrentPosition = @CurrentPosition where PlayerID = @PlayerID and GameID = @GameID", conn, trans))
+                    {
+                        command.Parameters.AddWithValue("@CurrentPosition", isp.currentPosition);
+                        command.Parameters.AddWithValue("@PlayerID", isp.userToken);
+                        command.Parameters.AddWithValue("@GameID", isp.gameID);
+                        if(command.ExecuteNonQuery() != 1)
+                        {
+                            throw new Exception("Query failed unexpectedly");
+                        }
+                        trans.Commit();
+                    }
+                }
+            }
+        }
         [Route("TriviaService/end-of-turn")]
         public bool PostEndOfPlayerTurn([FromBody] PlayerTurn pt)
         {

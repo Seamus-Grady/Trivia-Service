@@ -164,6 +164,7 @@
     <Compile Include="Models\Card.cs" />
     <Compile Include="Models\CardInformation.cs" />
     <Compile Include="Models\GameState.cs" />
+    <Compile Include="Models\InitialSetupPlayer.cs" />
     <Compile Include="Models\JoinGamePlayerFriend.cs" />
     <Compile Include="Models\JoinGamePlayerHost.cs" />
     <Compile Include="Models\Player.cs" />
