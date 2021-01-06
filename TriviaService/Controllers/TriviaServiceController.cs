@@ -117,6 +117,7 @@ namespace TriviaService.Controllers
             {
                 throw new HttpResponseException(HttpStatusCode.Forbidden);
             }
+            StringBuilder strCommand = new StringBuilder();
             using (SqlConnection conn = new SqlConnection(TriviaServiceDB))
             {
                 conn.Open();
@@ -208,12 +209,23 @@ namespace TriviaService.Controllers
                             currentAnswer = "Roll Again";
                             break;
                     }
-                    using (SqlCommand command = new SqlCommand("update Games set CurrentQuestionCat = @CurrentQuestionCat, CurrentQuestion = @CurrentQuestion, CurrentAnswer = @CurrentAnswer, Deck = @Deck where GameID = @GameID", conn, trans))
+                    if(!shuffleDeck.Equals(""))
+                    {
+                        strCommand.Append("update Games set CurrentQuestionCat = @CurrentQuestionCat, CurrentQuestion = @CurrentQuestion, CurrentAnswer = @CurrentAnswer, Deck = @Deck where GameID = @GameID");
+                    }
+                    else
+                    {
+                        strCommand.Append("update Games set CurrentQuestionCat = @CurrentQuestionCat, CurrentQuestion = @CurrentQuestion, CurrentAnswer = @CurrentAnswer where GameID = @GameID");
+                    }
+                    using (SqlCommand command = new SqlCommand(strCommand.ToString(), conn, trans))
                     {
                         command.Parameters.AddWithValue("@CurrentQuestionCat", ci.category);
                         command.Parameters.AddWithValue("@CurrentQuestion", currentQuestion);
                         command.Parameters.AddWithValue("@CurrentAnswer", currentAnswer);
-                        command.Parameters.AddWithValue("@Deck", shuffleDeck);
+                        if (!shuffleDeck.Equals(""))
+                        {
+                            command.Parameters.AddWithValue("@Deck", shuffleDeck);
+                        }
                         command.Parameters.AddWithValue("@GameID", ci.gameID);
                         if (command.ExecuteNonQuery() != 1)
                         {
@@ -263,8 +275,9 @@ namespace TriviaService.Controllers
             }
         }
         [Route("TriviaService/end-of-turn")]
-        public bool PostEndOfPlayerTurn([FromBody] PlayerTurn pt)
+        public void PutEndOfPlayerTurn([FromBody] PlayerTurn pt)
         {
+            int playerChoice;
             if (pt == null)
             {
                 throw new HttpResponseException(HttpStatusCode.Forbidden);
@@ -272,7 +285,6 @@ namespace TriviaService.Controllers
             string nextPlayerTurn = "";
             StringBuilder str = new StringBuilder();
             StringBuilder str2 = new StringBuilder();
-            bool playerWon = false;
             using (SqlConnection conn = new SqlConnection(TriviaServiceDB))
             {
                 conn.Open();
@@ -288,7 +300,6 @@ namespace TriviaService.Controllers
                             }
                             trans.Commit();
                         }
-                        return false;
                     
                     }
                     else
@@ -331,6 +342,8 @@ namespace TriviaService.Controllers
                             }
                             using (SqlCommand command = new SqlCommand("select * from PlayerUser where GameID = @GameID and PlayerID = @PlayerID", conn, trans))
                             {
+                                command.Parameters.AddWithValue("@GameID", pt.gameID);
+                                command.Parameters.AddWithValue("@PlayerID", pt.userToken);
                                 using (SqlDataReader reader = command.ExecuteReader())
                                 {
                                     if (!reader.HasRows)
@@ -346,7 +359,6 @@ namespace TriviaService.Controllers
                                             && (int)reader["Science"] == 1 && (int)reader["Sport"] == 1)
                                         {
                                             str2.Append(" CurrentPlayer = null,");
-                                            playerWon = true;
                                         }
                                     }
                                 }
@@ -356,6 +368,7 @@ namespace TriviaService.Controllers
                         {
                             using (SqlCommand command = new SqlCommand("select * from Games where GameID = @GameID", conn, trans))
                             {
+                                command.Parameters.AddWithValue("@GameID", pt.gameID);
                                 using (SqlDataReader reader = command.ExecuteReader())
                                 {
                                     if (!reader.HasRows)
@@ -367,21 +380,21 @@ namespace TriviaService.Controllers
                                     else
                                     {
                                         reader.Read();
-                                        switch (pt.playerTurn)
+                                        int.TryParse(pt.playerTurn, out playerChoice);
+                                        playerChoice++;
+                                        while(true)
                                         {
-                                            case 0:
-                                                nextPlayerTurn = reader["Player1"].ToString();
+                                            if(playerChoice > 4)
+                                            {
+                                                playerChoice = 1;
+                                            }
+                                            if(reader["Player" + playerChoice] != DBNull.Value)
+                                            {
+                                                nextPlayerTurn = reader["Player" + playerChoice].ToString();
                                                 break;
-                                            case 1:
-                                                nextPlayerTurn = reader["Player2"].ToString();
-                                                break;
-                                            case 2:
-                                                nextPlayerTurn = reader["Player3"].ToString();
-                                                break;
-                                            case 3:
-                                                nextPlayerTurn = reader["Player4"].ToString();
-                                                break;
-                                        }
+                                            }
+                                            playerChoice++;
+                                        } 
                                     }
                                 }
                                 str2.Append("CurrentPlayer = ");
@@ -391,6 +404,7 @@ namespace TriviaService.Controllers
                             str2.Append("CurrentQuestionCat = null, CurrentQuestion = null, CurrentAnswer = null where GameID = @GameID");
                             using (SqlCommand command2 = new SqlCommand(str2.ToString(), conn, trans))
                             {
+                                command2.Parameters.AddWithValue("@GameID", pt.gameID);
                                 if (command2.ExecuteNonQuery() != 1)
                                 {
                                     throw new Exception("Query failed unexpectedly");
@@ -402,7 +416,6 @@ namespace TriviaService.Controllers
                     }
                 }
             }
-            return playerWon;
         }
         [Route("TriviaService/join-game")]
         public string PostJoinGame([FromBody] JoinGamePlayerFriend player)

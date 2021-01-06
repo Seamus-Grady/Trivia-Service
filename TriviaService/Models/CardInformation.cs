@@ -7,7 +7,7 @@ namespace TriviaService.Models
 {
     public class CardInformation
     {
-        public int gameID { get; set; }
+        public string gameID { get; set; }
         public int? position { get; set; }
         public int category { get; set; }
         public string playerMovement { get; set; }
