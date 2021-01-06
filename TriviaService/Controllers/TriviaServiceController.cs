@@ -106,7 +106,7 @@ namespace TriviaService.Controllers
             }
         }
         [Route ("TriviaService/cards-game")]
-        public Card GetCard([FromBody] CardInformation ci)
+        public Card PostCard([FromBody] CardInformation ci)
         {
             string shuffleDeck = "";
             int cardNum;
@@ -138,7 +138,8 @@ namespace TriviaService.Controllers
                                     {
                                         shuffleDeck = GenerateDeck();
                                     }
-                                    int.TryParse(shuffleDeck.Substring(shuffleDeck.LastIndexOf(',')), out cardNum);
+                                    int.TryParse(shuffleDeck.Substring(shuffleDeck.LastIndexOf(',') + 1), out cardNum);
+                                    shuffleDeck = shuffleDeck.Substring(0, shuffleDeck.LastIndexOf(','));
                                 }
                                 else
                                 {
@@ -231,7 +232,7 @@ namespace TriviaService.Controllers
                         {
                             throw new Exception("Query failed unexpectedly");
                         }
-                        trans.Commit();
+
                     }
                     using (SqlCommand command = new SqlCommand("update PlayerUser set CurrentPosition = @CurrentPosition, CurrentPositionMovement = @CurrentPositionMovement where GameID = @GameID", conn, trans))
                     {
@@ -925,7 +926,7 @@ namespace TriviaService.Controllers
             {
                 str.Append(x + ",");
             }
-            str.Remove(str.Length - 2, 1);
+            str.Remove(str.Length - 1, 1);
             return str.ToString();
         }
     }
