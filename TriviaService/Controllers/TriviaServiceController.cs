@@ -105,15 +105,15 @@ namespace TriviaService.Controllers
                 }
             }
         }
-        [Route ("TriviaService/cards-game")]
-        public Card PostCard([FromBody] CardInformation ci)
+        [Route ("TriviaService/cards-game/{gameID}/{userToken}/{position}/{category}/{playerMovement}")]
+        public Card GetCard([FromUri] string gameID, [FromUri]string userToken, [FromUri] int? position, [FromUri] int category, [FromUri] string playerMovement)
         {
             string shuffleDeck = "";
             int cardNum;
             string currentQuestion = "";
             string currentAnswer = "";
             Card cardToReturn = new Card();
-            if (ci == null)
+            if (gameID == null || userToken == null|| position == null || category < 0 || category > 6 || playerMovement == null)
             {
                 throw new HttpResponseException(HttpStatusCode.Forbidden);
             }
@@ -123,11 +123,11 @@ namespace TriviaService.Controllers
                 conn.Open();
                 using (SqlTransaction trans = conn.BeginTransaction())
                 {
-                    if (ci.category != 6)
+                    if (category != 6)
                     {
                         using (SqlCommand command = new SqlCommand("select Deck from Games where gameID = @gameID", conn, trans))
                         {
-                            command.Parameters.AddWithValue("@gameID", ci.gameID);
+                            command.Parameters.AddWithValue("@gameID", gameID);
                             using (SqlDataReader reader = command.ExecuteReader())
                             {
                                 if (reader.HasRows)
@@ -179,7 +179,7 @@ namespace TriviaService.Controllers
                             }
                         }
                     }
-                    switch (ci.category)
+                    switch (category)
                     {
                         case 0:
                             currentQuestion = cardToReturn.Geography;
@@ -220,25 +220,26 @@ namespace TriviaService.Controllers
                     }
                     using (SqlCommand command = new SqlCommand(strCommand.ToString(), conn, trans))
                     {
-                        command.Parameters.AddWithValue("@CurrentQuestionCat", ci.category);
+                        command.Parameters.AddWithValue("@CurrentQuestionCat", category);
                         command.Parameters.AddWithValue("@CurrentQuestion", currentQuestion);
                         command.Parameters.AddWithValue("@CurrentAnswer", currentAnswer);
                         if (!shuffleDeck.Equals(""))
                         {
                             command.Parameters.AddWithValue("@Deck", shuffleDeck);
                         }
-                        command.Parameters.AddWithValue("@GameID", ci.gameID);
+                        command.Parameters.AddWithValue("@GameID", gameID);
                         if (command.ExecuteNonQuery() != 1)
                         {
                             throw new Exception("Query failed unexpectedly");
                         }
 
                     }
-                    using (SqlCommand command = new SqlCommand("update PlayerUser set CurrentPosition = @CurrentPosition, CurrentPositionMovement = @CurrentPositionMovement where GameID = @GameID", conn, trans))
+                    using (SqlCommand command = new SqlCommand("update PlayerUser set CurrentPosition = @CurrentPosition, CurrentPositionMovement = @CurrentPositionMovement where GameID = @GameID and PlayerID = @PlayerID", conn, trans))
                     {
-                        command.Parameters.AddWithValue("@CurrentPosition", ci.position);
-                        command.Parameters.AddWithValue("@CurrentPositionMovement", ci.playerMovement);
-                        command.Parameters.AddWithValue("@GameID", ci.gameID);
+                        command.Parameters.AddWithValue("@CurrentPosition", position);
+                        command.Parameters.AddWithValue("@CurrentPositionMovement", playerMovement);
+                        command.Parameters.AddWithValue("@GameID", gameID);
+                        command.Parameters.AddWithValue("@PlayerID", userToken);
                         if (command.ExecuteNonQuery() != 1)
                         {
                             throw new Exception("Query failed unexpectedly");
@@ -283,57 +284,20 @@ namespace TriviaService.Controllers
             {
                 throw new HttpResponseException(HttpStatusCode.Forbidden);
             }
-            string nextPlayerTurn = "";
-            StringBuilder str = new StringBuilder();
-            StringBuilder str2 = new StringBuilder();
-            using (SqlConnection conn = new SqlConnection(TriviaServiceDB))
+            lock (sync)
             {
-                conn.Open();
-                using (SqlTransaction trans = conn.BeginTransaction())
+                string nextPlayerTurn = "";
+                StringBuilder str = new StringBuilder();
+                StringBuilder str2 = new StringBuilder();
+                using (SqlConnection conn = new SqlConnection(TriviaServiceDB))
                 {
-                    if (pt.answeredQuestion == 1 && !pt.isAPiece)
+                    conn.Open();
+                    using (SqlTransaction trans = conn.BeginTransaction())
                     {
-                        using (SqlCommand command = new SqlCommand("update Games set CurrentQuestionCat = null, CurrentQuestion = null, CurrentAnswer = null where GameID = @GameID", conn, trans))
+                        if (pt.answeredQuestion == 1 && !pt.isAPiece)
                         {
-                            if (command.ExecuteNonQuery() != 1)
+                            using (SqlCommand command = new SqlCommand("update Games set CurrentQuestionCat = null, CurrentQuestion = null, CurrentAnswer = null where GameID = @GameID", conn, trans))
                             {
-                                throw new Exception("Query failed unexpectedly");
-                            }
-                            trans.Commit();
-                        }
-                    
-                    }
-                    else
-                    {
-                        str2.Append("update Games set ");
-                        if (pt.isAPiece)
-                        {
-                            str.Append("update PlayerUser set ");
-                            switch (pt.category)
-                            {
-                                case 0:
-                                    str.Append("Geography = 1");
-                                    break;
-                                case 1:
-                                    str.Append("Entertainment = 1");
-                                    break;
-                                case 2:
-                                    str.Append("History = 1");
-                                    break;
-                                case 3:
-                                    str.Append("Art = 1");
-                                    break;
-                                case 4:
-                                    str.Append("Science = 1");
-                                    break;
-                                case 5:
-                                    str.Append("Sports = 1");
-                                    break;
-                            }
-                            str.Append(" where PlayerID = @PlayerID and GameID = @GameID");
-                            using (SqlCommand command = new SqlCommand(str.ToString(), conn, trans))
-                            {
-                                command.Parameters.AddWithValue("@PlayerID", pt.userToken);
                                 command.Parameters.AddWithValue("@GameID", pt.gameID);
                                 if (command.ExecuteNonQuery() != 1)
                                 {
@@ -341,66 +305,106 @@ namespace TriviaService.Controllers
                                 }
                                 trans.Commit();
                             }
-                            using (SqlCommand command = new SqlCommand("select * from PlayerUser where GameID = @GameID and PlayerID = @PlayerID", conn, trans))
+
+                        }
+                        else
+                        {
+                            str2.Append("update Games set ");
+                            if (pt.isAPiece)
                             {
-                                command.Parameters.AddWithValue("@GameID", pt.gameID);
-                                command.Parameters.AddWithValue("@PlayerID", pt.userToken);
-                                using (SqlDataReader reader = command.ExecuteReader())
+                                str.Append("update PlayerUser set ");
+                                switch (pt.category)
                                 {
-                                    if (!reader.HasRows)
+                                    case 0:
+                                        str.Append("Geography = 1");
+                                        break;
+                                    case 1:
+                                        str.Append("Entertainment = 1");
+                                        break;
+                                    case 2:
+                                        str.Append("History = 1");
+                                        break;
+                                    case 3:
+                                        str.Append("Art = 1");
+                                        break;
+                                    case 4:
+                                        str.Append("Science = 1");
+                                        break;
+                                    case 5:
+                                        str.Append("Sports = 1");
+                                        break;
+                                }
+                                str.Append(" where PlayerID = @PlayerID and GameID = @GameID");
+                                using (SqlCommand command = new SqlCommand(str.ToString(), conn, trans))
+                                {
+                                    command.Parameters.AddWithValue("@PlayerID", pt.userToken);
+                                    command.Parameters.AddWithValue("@GameID", pt.gameID);
+                                    if (command.ExecuteNonQuery() != 1)
                                     {
-                                        reader.Close();
-                                        trans.Commit();
-                                        throw new HttpResponseException(HttpStatusCode.Forbidden);
+                                        throw new Exception("Query failed unexpectedly");
                                     }
-                                    else
+                                }
+                                using (SqlCommand command = new SqlCommand("select * from PlayerUser where GameID = @GameID and PlayerID = @PlayerID", conn, trans))
+                                {
+                                    command.Parameters.AddWithValue("@GameID", pt.gameID);
+                                    command.Parameters.AddWithValue("@PlayerID", pt.userToken);
+                                    using (SqlDataReader reader = command.ExecuteReader())
                                     {
-                                        reader.Read();
-                                        if ((int)reader["Geography"] == 1 && (int)reader["Entertainment"] == 1 && (int)reader["History"] == 1 && (int)reader["Art"] == 1
-                                            && (int)reader["Science"] == 1 && (int)reader["Sport"] == 1)
+                                        if (!reader.HasRows)
                                         {
-                                            str2.Append(" CurrentPlayer = null,");
+                                            reader.Close();
+                                            trans.Commit();
+                                            throw new HttpResponseException(HttpStatusCode.Forbidden);
+                                        }
+                                        else
+                                        {
+                                            reader.Read();
+                                            if ((int)reader["Geography"] == 1 && (int)reader["Entertainment"] == 1 && (int)reader["History"] == 1 && (int)reader["Art"] == 1
+                                                && (int)reader["Science"] == 1 && (int)reader["Sport"] == 1)
+                                            {
+                                                str2.Append(" CurrentPlayer = null,");
+                                            }
                                         }
                                     }
                                 }
                             }
-                        }
-                        else
-                        {
-                            using (SqlCommand command = new SqlCommand("select * from Games where GameID = @GameID", conn, trans))
+                            if (!str2.ToString().Contains(" CurrentPlayer = null,"))
                             {
-                                command.Parameters.AddWithValue("@GameID", pt.gameID);
-                                using (SqlDataReader reader = command.ExecuteReader())
+                                using (SqlCommand command = new SqlCommand("select * from Games where GameID = @GameID", conn, trans))
                                 {
-                                    if (!reader.HasRows)
+                                    command.Parameters.AddWithValue("@GameID", pt.gameID);
+                                    using (SqlDataReader reader = command.ExecuteReader())
                                     {
-                                        reader.Close();
-                                        trans.Commit();
-                                        throw new HttpResponseException(HttpStatusCode.Forbidden);
-                                    }
-                                    else
-                                    {
-                                        reader.Read();
-                                        int.TryParse(pt.playerTurn, out playerChoice);
-                                        playerChoice++;
-                                        while(true)
+                                        if (!reader.HasRows)
                                         {
-                                            if(playerChoice > 4)
+                                            reader.Close();
+                                            trans.Commit();
+                                            throw new HttpResponseException(HttpStatusCode.Forbidden);
+                                        }
+                                        else
+                                        {
+                                            reader.Read();
+                                            int.TryParse(pt.playerTurn, out playerChoice);
+                                            playerChoice+=2;
+                                            while (true)
                                             {
-                                                playerChoice = 1;
+                                                if (playerChoice > 4)
+                                                {
+                                                    playerChoice = 1;
+                                                }
+                                                if (reader["Player" + playerChoice] != DBNull.Value)
+                                                {
+                                                    nextPlayerTurn = reader["Player" + playerChoice].ToString();
+                                                    break;
+                                                }
+                                                playerChoice++;
                                             }
-                                            if(reader["Player" + playerChoice] != DBNull.Value)
-                                            {
-                                                nextPlayerTurn = reader["Player" + playerChoice].ToString();
-                                                break;
-                                            }
-                                            playerChoice++;
-                                        } 
+                                        }
                                     }
+                                    str2.Append("CurrentPlayer = '");
+                                    str2.Append(nextPlayerTurn);
+                                    str2.Append("', ");
                                 }
-                                str2.Append("CurrentPlayer = ");
-                                str2.Append(nextPlayerTurn);
-                                str2.Append(", ");
                             }
                             str2.Append("CurrentQuestionCat = null, CurrentQuestion = null, CurrentAnswer = null where GameID = @GameID");
                             using (SqlCommand command2 = new SqlCommand(str2.ToString(), conn, trans))
@@ -412,7 +416,6 @@ namespace TriviaService.Controllers
                                 }
                                 trans.Commit();
                             }
-                            
                         }
                     }
                 }

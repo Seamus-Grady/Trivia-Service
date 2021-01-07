@@ -6,21 +6,31 @@ using System.Web;
 
 namespace TriviaService.Models
 {
-    [DataContract]
         public class Card
         {
-            public string Geography { get; set; }
-            public string Entertainment { get; set; }
-            public string History { get; set; }
-            public string Art { get; set; }
-            public string Science { get; set; }
-            public string Sports { get; set; }
-            public string GeographyA { get; set; }
-            public string EntertainmentA { get; set; }
-            public string HistoryA { get; set; }
-            public string ArtA { get; set; }
-            public string ScienceA { get; set; }
-            public string SportsA { get; set; }
-
+        [DataMember(EmitDefaultValue = false)]
+        public string Geography { get; set; }
+        [DataMember(EmitDefaultValue = false)]
+        public string Entertainment { get; set; }
+        [DataMember(EmitDefaultValue = false)]
+        public string History { get; set; }
+        [DataMember(EmitDefaultValue = false)]
+        public string Art { get; set; }
+        [DataMember(EmitDefaultValue = false)]
+        public string Science { get; set; }
+        [DataMember(EmitDefaultValue = false)]
+        public string Sports { get; set; }
+        [DataMember(EmitDefaultValue = false)]
+        public string GeographyA { get; set; }
+        [DataMember(EmitDefaultValue = false)]
+        public string EntertainmentA { get; set; }
+        [DataMember(EmitDefaultValue = false)]
+        public string HistoryA { get; set; }
+        [DataMember(EmitDefaultValue = false)]
+        public string ArtA { get; set; }
+        [DataMember(EmitDefaultValue = false)]
+        public string ScienceA { get; set; }
+        [DataMember(EmitDefaultValue = false)]
+        public string SportsA { get; set; }
         }
 }
