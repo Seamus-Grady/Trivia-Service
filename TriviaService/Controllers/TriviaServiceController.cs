@@ -886,35 +886,38 @@ namespace TriviaService.Controllers
             {
                 throw new HttpResponseException(HttpStatusCode.Forbidden);
             }
-            using(SqlConnection conn = new SqlConnection(TriviaServiceDB))
+            lock (sync)
             {
-                conn.Open();
-                using (SqlTransaction trans = conn.BeginTransaction())
+                using (SqlConnection conn = new SqlConnection(TriviaServiceDB))
                 {
-                    using (SqlCommand command = new SqlCommand("select UserID from Users where UserID = @UserID", conn, trans))
+                    conn.Open();
+                    using (SqlTransaction trans = conn.BeginTransaction())
                     {
-                        command.Parameters.AddWithValue("@UserID", player.UserToken);
-                        using (SqlDataReader reader = command.ExecuteReader())
+                        using (SqlCommand command = new SqlCommand("select UserID from Users where UserID = @UserID", conn, trans))
                         {
-                            if(!reader.HasRows)
+                            command.Parameters.AddWithValue("@UserID", player.UserToken);
+                            using (SqlDataReader reader = command.ExecuteReader())
                             {
-                                reader.Close();
-                                trans.Commit();
-                                throw new HttpResponseException(HttpStatusCode.Forbidden);
+                                if (!reader.HasRows)
+                                {
+                                    reader.Close();
+                                    trans.Commit();
+                                    throw new HttpResponseException(HttpStatusCode.Forbidden);
+                                }
                             }
                         }
-                    }
-                    using (SqlCommand command = new SqlCommand("update Games set CurrentPlayer = @CurrentPlayer, Deck = @Deck where GameID = @GameID and Player1 = @Player1", conn, trans))
-                    {
-                        command.Parameters.AddWithValue("@CurrentPlayer", player.UserToken);
-                        command.Parameters.AddWithValue("@Deck", GenerateDeck());
-                        command.Parameters.AddWithValue("@GameID", player.gameID);
-                        command.Parameters.AddWithValue("@Player1", player.UserToken);
-                        if (command.ExecuteNonQuery() != 1)
+                        using (SqlCommand command = new SqlCommand("update Games set CurrentPlayer = @CurrentPlayer, Deck = @Deck where GameID = @GameID and Player1 = @Player1", conn, trans))
                         {
-                            throw new Exception("Query failed unexpectedly");
+                            command.Parameters.AddWithValue("@CurrentPlayer", player.UserToken);
+                            command.Parameters.AddWithValue("@Deck", GenerateDeck());
+                            command.Parameters.AddWithValue("@GameID", player.gameID);
+                            command.Parameters.AddWithValue("@Player1", player.UserToken);
+                            if (command.ExecuteNonQuery() != 1)
+                            {
+                                throw new Exception("Query failed unexpectedly");
+                            }
+                            trans.Commit();
                         }
-                        trans.Commit();
                     }
                 }
             }
