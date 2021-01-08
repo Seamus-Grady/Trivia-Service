@@ -927,7 +927,7 @@ namespace TriviaService.Controllers
         {
             StringBuilder str = new StringBuilder();
             Random ran = new Random();
-            var randomNumbers = Enumerable.Range(1, 94).OrderBy(x => ran.Next()).Take(94).ToList();
+            var randomNumbers = Enumerable.Range(1, 95).OrderBy(x => ran.Next()).Take(94).ToList();
             foreach(var x in randomNumbers)
             {
                 str.Append(x + ",");
