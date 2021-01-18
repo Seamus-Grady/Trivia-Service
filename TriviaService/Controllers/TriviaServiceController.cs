@@ -22,7 +22,11 @@ namespace TriviaService.Controllers
         {
             TriviaServiceDB = ConfigurationManager.ConnectionStrings["TriviaServiceDB"].ConnectionString;
         }
-
+        /// <summary>
+        /// A post request to create a user with a nickname provided to the server as the body of the post request. 
+        /// The server creates a unique user token that will be associated with that nickname and adds that to the database
+        /// Returns the user token to the the computer that made the post request
+        /// </summary>
         [Route("TriviaService/users")]
         public string PostMakeUser([FromBody] string Nickname)
         {
@@ -56,6 +60,11 @@ namespace TriviaService.Controllers
                 }
             }
         }
+        /// <summary>
+        /// A post request to start the game. The user will send a to the server a JoinGamePlayerHost object and the game will be started 
+        /// and a deck is gernerated and the currentPlayer is changed to Player1 aka the host of the specific game
+        /// The gameId is returned to the user
+        /// </summary>
         [Route("TriviaService/create-game")]
         public string PostCreateGame([FromBody] JoinGamePlayerHost player)
         {
@@ -105,6 +114,13 @@ namespace TriviaService.Controllers
                 }
             }
         }
+        /// <summary>
+        /// A Get request to get a card out of the deck database with it's primary key id that correspondes 
+        /// to the last number in the string sequence that represents the deck. The user will also send it's
+        /// current position on the board as well as how it navigated to that position and also a category that 
+        /// will be updated in the games databases to reflect the current question that will be asked of the user
+        /// Returns a card object that holds all the questions and answers for that specific card
+        /// </summary>
         [Route ("TriviaService/cards-game/{gameID}/{userToken}/{position}/{category}/{playerMovement}")]
         public Card GetCard([FromUri] string gameID, [FromUri]string userToken, [FromUri] int? position, [FromUri] int category, [FromUri] string playerMovement)
         {
@@ -250,6 +266,10 @@ namespace TriviaService.Controllers
             }
             return cardToReturn;
         }
+        /// <summary>
+        /// This is a put request to set up the PlayerUser database with the inital start position 
+        /// and also what color piece did the user choose
+        /// </summary>
         [Route("TriviaService/game-setup")]
         public void PutInitalSetup([FromBody] InitialSetupPlayer isp)
         {
@@ -276,6 +296,12 @@ namespace TriviaService.Controllers
                 }
             }
         }
+        /// <summary>
+        /// This is a put request for when the user has completed their turn and are ready to end their turn
+        /// Depending on if the user answered the question or gained a piece asked to him he will continue his 
+        /// turn or the server will determine the next players turn in goes in order Player1 to Player2 to Player3 to Player4 
+        /// and back to Player1 and update the current games current player as well as reset the current question and current answer
+        /// </summary>
         [Route("TriviaService/end-of-turn")]
         public void PutEndOfPlayerTurn([FromBody] PlayerTurn pt)
         {
@@ -421,6 +447,10 @@ namespace TriviaService.Controllers
                 }
             }
         }
+        /// <summary>
+        /// The post method will add a player to the games database and also create a new row in the 
+        /// PlayerUser table for this user asking to join the game.
+        /// </summary>
         [Route("TriviaService/join-game")]
         public string PostJoinGame([FromBody] JoinGamePlayerFriend player)
         {
@@ -569,6 +599,9 @@ namespace TriviaService.Controllers
             }
             return "";
         }
+        /// <summary>
+        /// Gets the current status of the game and depending on brief will display the whole game information or just part of the game information
+        /// </summary>
         [Route("TriviaService/games/{gameID}/{brief}")]
         public GameState GetGameState([FromUri] string gameID, [FromUri] bool brief)
         {
@@ -717,6 +750,9 @@ namespace TriviaService.Controllers
                 }
             }
         }
+        /// <summary>
+        /// If the user is not the host they are able to cancel and leave the lobby at any time
+        /// </summary>
         [Route("TriviaService/games")]
         public void PutCancelJoinRequest([FromBody] CancelJoinPlayer cjp)
         {
@@ -922,7 +958,11 @@ namespace TriviaService.Controllers
                 }
             }
         }
+        //Lock for the server when locking the database was necessary
         private static readonly object sync = new object();
+        /// <summary>
+        /// Helper method to generate the string that is the shuffled deck of cards
+        /// </summary>
         public string GenerateDeck()
         {
             StringBuilder str = new StringBuilder();
